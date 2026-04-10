@@ -35,11 +35,11 @@ const modelConfig = [
         group: "Training Data Split Proportions",
         params: [
             { id: "test-split", placeholder: "0", 
-              train_label: "Testing Set (<i>non-negative float</i>)", tune_label: "Testing Set (<i>positive float</i>)",
+              train_label: "Testing Set (<i>non-negative float</i>)", tune_label: "Testing Set (<i>non-negative float</i>)",
               train_alert: "- Invalid testing set proportion. Must be non-negative float between 0 (inclusive) and 1.",
               tune_alert: "- Invalid testing set proportion. Must be non-negative float between 0 (inclusive) and 1. Not a tunable parameter." },
             { id: "valid-split", placeholder: "0", 
-              train_label: "Validation Set (<i>non-negative float</i>)", tune_label: "Validation Set (<i>positive float</i>)",
+              train_label: "Validation Set (<i>non-negative float</i>)", tune_label: "Validation Set (<i>non-negative float</i>)",
               train_alert: "- Invalid validation set proportion. Must be non-negative float between 0 (inclusive) and 1.",
               trune_alert: "- Invalid validation set proportion. Must be non-negative float between 0 (inclusive) and 1. Not a tunable parameter." }
         ]
