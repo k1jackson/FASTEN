@@ -29,8 +29,10 @@ email: k1jackson@ucsd.edu
 github_username:  k1jackson
 
 # Build settings
-theme: minima
+# theme: pages-themes/cayman@v0.2.0
+remote_theme: pages-themes/cayman
 plugins:
+  - jekyll-remote-theme
   - jekyll-feed
 
 # Exclude from processing.

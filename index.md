@@ -3,22 +3,22 @@
 # To modify the layout, see https://jekyllrb.com/docs/themes/#overriding-theme-defaults
 
 layout: default
-title: Config Designer
+title: FASTEN Configuration File Designer
 ---
 
 ## Data Parameters
 <div class="upload-container" style="padding-bottom: 20px;">
-    <label for="tsv-upload" style="display: inline-block; min-width: 200px;"><strong>Training Data File</strong> <i>(.tsv)</i></label>
+    <label for="tsv-upload" style="display: inline-block; min-width: 250px;"><strong>Training Data File</strong> <i>(.tsv)</i></label>
     <input type="file" id="tsv-upload" accept=".tsv">
 </div>
 <div id="data-params" style="display: none; min-width: 200px;"></div>
 
 ## Model Parameters
 <div class="export-container" id="export-options" style="padding-bottom: 20px;">
-    <span style="display: inline-block; min-width: 200px"><strong>Configuration File</strong> (<i>.json</i>)</span>
-    <label style="margin-right: 10px;"><input type="radio" class="export-option" name="model-mode" value="Train">Train</label>
-    <label style="margin-right: 10px;"><input type="radio" class="export-option" name="model-mode" value="Tune">Tune</label>
-    <button id="export-button" style="display: none; margin-left: 10px;">Export</button>
+    <span style="display: inline-block; min-width: 250px"><strong>Configuration File</strong> (<i>.json</i>)</span>
+    <label style="margin-right: 10px;"><input type="radio" style="margin-right: 2.5px" class="export-option" name="model-mode" value="Train">Train</label>
+    <label style="margin-right: 10px;"><input type="radio" style="margin-right: 2.5px" class="export-option" name="model-mode" value="Tune">Tune</label>
+    <button id="export-button" style="display: none; margin-left: 25px;">Export</button>
 </div>
 <div id="model-params" style="display: none; min-width: 200px;">
     <p>hello</p>
@@ -69,7 +69,7 @@ const modelConfig = [
               train_alert: "- Invalid batch size. Must be positive integer.",
               tune_label: "Batch Size (<i>list of positive integers</i>)", 
               tune_alert: "- Invalid batch size(s). Must be list of positive integers." },
-            { id: "num-epochs", train_placeholder: "5000", tune_placeholder: "1000, 2500, 5000, 10000, 25000, 50000",
+            { id: "num-epochs", train_placeholder: "5000", tune_placeholder: "5000, 10000, 25000, 50000",
               train_label: "Number of Epochs (<i>positive integer</i>)",
               train_alert: "- Invalid number of epochs. Must be positive integer.",
               tune_label: "Number of Epochs (<i>list of positive integers</i>)", 
@@ -81,7 +81,7 @@ const modelConfig = [
         params: [
             { id: "optimizer", type: "select", options: ["SGD", "Adam", "AdamW"], 
               train_label: "Optimization Algorithm", tune_label: "Optimization Algorithm" },
-            { id: "learning-rate", train_placeholder: "0.001", tune_placeholder: "0.001, 0.0005, 0.0001, 0.00005, 0.00001",
+            { id: "learning-rate", train_placeholder: "0.001", tune_placeholder: "0.001, 0.0005, 0.0001, 0.00005",
               train_label: "Learning Rate (<i>positive float</i>)",
               train_alert: "- Invalid learning rate. Must be positive float.",
               tune_label: "Learning Rate (<i>list of positive floats</i>)", 
@@ -122,11 +122,11 @@ function renderModelParams(export_mode) {
             if (param.type === 'select') {
                 inputHtml = `<select id="${param.id}">${param.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select>`;
             } else {
-                if (export_mode == 'Train') { inputHtml = `<input type="text" id="${param.id}" placeholder="${param.train_placeholder}">`; }
-                if (export_mode == 'Tune') { inputHtml = `<input type="text" id="${param.id}" placeholder="${param.tune_placeholder}">`; }
+                if (export_mode == 'Train') { inputHtml = `<input type="text" id="${param.id}" style="width: 100px" placeholder="${param.train_placeholder}">`; }
+                if (export_mode == 'Tune') { inputHtml = `<input type="text" id="${param.id}" style="width: 300px" placeholder="${param.tune_placeholder}">`; }
             }
-            if (export_mode == 'Train') { row.innerHTML = `<label for="${param.id}" style="display: inline-block; min-width: 360px;">${param.train_label}</label>${inputHtml}`; }
-            if (export_mode == 'Tune') { row.innerHTML = `<label for="${param.id}" style="display: inline-block; min-width: 360px;">${param.tune_label}</label>${inputHtml}`; }
+            if (export_mode == 'Train') { row.innerHTML = `<label for="${param.id}" style="display: inline-block; min-width: 400px;">${param.train_label}</label>${inputHtml}`; }
+            if (export_mode == 'Tune') { row.innerHTML = `<label for="${param.id}" style="display: inline-block; min-width: 450px;">${param.tune_label}</label>${inputHtml}`; }
             sectionRow.appendChild(row);
         });
         modelContainer.appendChild(sectionRow);
@@ -149,20 +149,24 @@ dataContainer.addEventListener('change', function(event) {
         const typeOptions = parentRow.querySelector('.type-options');
         const distOptions = parentRow.querySelector('.dist-options');
         const nameEntry = parentRow.querySelector('.name-entry');
+        const threshEntry = parentRow.querySelector('.thresh-entry');
 
         if (radio.checked) {
             if (radio.value === 'input') {
                 nameEntry.style.display = 'block';
                 typeOptions.style.display = 'block';
+                threshEntry.style.display = 'none';
                 distOptions.style.display = 'none';
             } else {
                 nameEntry.style.display = 'block';
                 typeOptions.style.display = 'block';
+                threshEntry.style.display = 'block';
                 distOptions.style.display = 'block';
             }
         } else {
             nameEntry.style.display = 'none';
             typeOptions.style.display = 'none';
+            threshEntry.style.display = 'none';
             distOptions.style.display = 'none';
         }
     }
@@ -197,13 +201,18 @@ document.getElementById('tsv-upload').addEventListener('change', function(event)
                     row.style.paddingBottom = "10px";
 
                     row.innerHTML = `
-                        <span style="display: inline-block; min-width: 200px;"><strong>${clean_header}</strong></span>
-                        <label style="margin-right: 10px;"><input type="radio" class="param-option" name="group-${index}" value="input">Input</label>
-                        <label style="margin-right: 10px;"><input type="radio" class="param-option" name="group-${index}" value="output">Output</label>
+                        <span style="display: inline-block; min-width: 300px;"><strong>${clean_header}</strong></span>
+                        <label style="margin-right: 10px;"><input type="radio" style="margin-right: 2.5px" class="param-option" name="group-${index}" value="input">Input</label>
+                        <label style="margin-right: 10px;"><input type="radio" style="margin-right: 2.5px" class="param-option" name="group-${index}" value="output">Output</label>
                         
                         <div id="name-input-${index}" class="name-entry" style="display: none; margin-top: 10px; padding-left: 20px;">
                         <label for="name-${index}">Name: </label>
-                        <input type="text" id="name-${index}" name="name" placeholder="${clean_header}">
+                        <input type="text" id="name-${index}" style="width: 400px" name="name" placeholder="${clean_header}">
+                        </div>
+
+                        <div id="thresh-input-${index}" class="thresh-entry" style="display: none; margin-top: 10px; padding-left: 20px;">
+                        <label for="thresh-${index}">Threshold: </label>
+                        <input type="text" id="thresh-${index}" style="width: 100px" name="thresh" placeholder="0">
                         </div>
 
                         <div id="type-select-${index}" class="type-options" style="display: none; margin-top: 10px; padding-left: 20px;">
@@ -293,6 +302,7 @@ function collectAndExport() {
         if (role === 'output') {
             config.outputs[headerName] = {
                 name: getFieldValue(`name-${index}`),
+                threshold: getFieldValue(`thresh-${index}`),
                 type: document.getElementById(`type-${index}`).value,
                 distribution: document.getElementById(`dist-${index}`).value
             };
