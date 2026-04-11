@@ -34,11 +34,11 @@ const modelConfig = [
     {
         group: "Training Data Split Proportions",
         params: [
-            { id: "test-split", placeholder: "0", 
+            { id: "test-split", train_placeholder: "0", tune_placeholder: "0",
               train_label: "Testing Set (<i>non-negative float</i>)", tune_label: "Testing Set (<i>non-negative float</i>)",
               train_alert: "- Invalid testing set proportion. Must be non-negative float between 0 (inclusive) and 1.",
               tune_alert: "- Invalid testing set proportion. Must be non-negative float between 0 (inclusive) and 1. Not a tunable parameter." },
-            { id: "valid-split", placeholder: "0", 
+            { id: "valid-split", train_placeholder: "0", tune_placeholder: "0",
               train_label: "Validation Set (<i>non-negative float</i>)", tune_label: "Validation Set (<i>non-negative float</i>)",
               train_alert: "- Invalid validation set proportion. Must be non-negative float between 0 (inclusive) and 1.",
               trune_alert: "- Invalid validation set proportion. Must be non-negative float between 0 (inclusive) and 1. Not a tunable parameter." }
@@ -47,12 +47,12 @@ const modelConfig = [
     {
         group: "Neural Network Parameters",
         params: [
-            { id: "hidden-layers", placeholder: "4", 
+            { id: "hidden-layers", train_placeholder: "2", tune_placeholder: "2, 4, 6, 8",
               train_label: "Number of Hidden Layers (<i>positive integer</i>)",
               train_alert: "- Invalid number of hidden layers. Must be positive integer.",
               tune_label: "Number of Hidden Layers (<i>list of positive integers</i>)", 
               tune_alert: "- Invalid number(s) of hidden layers. Must be list of positive integers." },
-            { id: "hidden-size", placeholder: "64", 
+            { id: "hidden-size", train_placeholder: "64", tune_placeholder: "32, 64, 128, 256, 512",
               train_label: "Hidden Layer Size (<i>positive integer</i>)",
               train_alert: "- Invalid hidden layer size. Must be positive integer.",
               tune_label: "Hidden Layer Size (<i>list of positive integers</i>)", 
@@ -64,12 +64,12 @@ const modelConfig = [
         params: [
             { id: "device", type: "select", options: ["CPU", "CUDA"], 
               train_label: "Processing Device", tune_label: "Processing Device" },
-            { id: "batch-size", placeholder: "8", 
+            { id: "batch-size", train_placeholder: "64", tune_placeholder: "32, 64, 128, 256, 512", 
               train_label: "Batch Size (<i>positive integer</i>)",
               train_alert: "- Invalid batch size. Must be positive integer.",
               tune_label: "Batch Size (<i>list of positive integers</i>)", 
               tune_alert: "- Invalid batch size(s). Must be list of positive integers." },
-            { id: "num-epochs", placeholder: "1000", 
+            { id: "num-epochs", train_placeholder: "5000", tune_placeholder: "1000, 2500, 5000, 10000, 25000, 50000",
               train_label: "Number of Epochs (<i>positive integer</i>)",
               train_alert: "- Invalid number of epochs. Must be positive integer.",
               tune_label: "Number of Epochs (<i>list of positive integers</i>)", 
@@ -81,17 +81,17 @@ const modelConfig = [
         params: [
             { id: "optimizer", type: "select", options: ["SGD", "Adam", "AdamW"], 
               train_label: "Optimization Algorithm", tune_label: "Optimization Algorithm" },
-            { id: "learning-rate", placeholder: "0.001", alert: "learning rate",
+            { id: "learning-rate", train_placeholder: "0.001", tune_placeholder: "0.001, 0.0005, 0.0001, 0.00005, 0.00001",
               train_label: "Learning Rate (<i>positive float</i>)",
               train_alert: "- Invalid learning rate. Must be positive float.",
               tune_label: "Learning Rate (<i>list of positive floats</i>)", 
               tune_alert: "- Invalid learning rate(s). Must be list of positive floats." },
-            { id: "weight-decay", placeholder: "0", alert: "weight decay",
+            { id: "weight-decay", train_placeholder: "0", tune_placeholder: "0",
               train_label: "Weight Decay (<i>non-negative float</i>)",
               train_alert: "- Invalid weight decay. Must be non-negative float.",
               tune_label: "Weight Decay (<i>list of non-negative floats</i>)", 
               tune_alert: "- Invalid weight decay(s). Must be list of non-negative floats." },
-            { id: "momentum", placeholder: "0", 
+            { id: "momentum", train_placeholder: "0", tune_placeholder: "0",
               train_label: "Momentum (<i>non-negative float</i>)", 
               train_alert: "- Invalid momentum. Must be non-negative float.",
               tune_label: "Momentum (<i>list of non-negative floats</i>)", 
@@ -122,7 +122,8 @@ function renderModelParams(export_mode) {
             if (param.type === 'select') {
                 inputHtml = `<select id="${param.id}">${param.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}</select>`;
             } else {
-                inputHtml = `<input type="text" id="${param.id}" placeholder="${param.placeholder}">`;
+                if (export_mode == 'Train') { inputHtml = `<input type="text" id="${param.id}" placeholder="${param.train_placeholder}">`; }
+                if (export_mode == 'Tune') { inputHtml = `<input type="text" id="${param.id}" placeholder="${param.tune_placeholder}">`; }
             }
             if (export_mode == 'Train') { row.innerHTML = `<label for="${param.id}" style="display: inline-block; min-width: 360px;">${param.train_label}</label>${inputHtml}`; }
             if (export_mode == 'Tune') { row.innerHTML = `<label for="${param.id}" style="display: inline-block; min-width: 360px;">${param.tune_label}</label>${inputHtml}`; }
@@ -252,7 +253,7 @@ function getFieldValue(id) {
     if (!el) return null;
     const isHidden = el.closest('div').style.display === 'none';
     if (isHidden || el.value.trim() === "") {
-        return el.placeholder || el.value;
+        return el.placeholder || el.value; 
     }
     return el.value;
 }
