@@ -41,7 +41,7 @@ const modelConfig = [
             { id: "valid-split", train_placeholder: "0", tune_placeholder: "0",
               train_label: 'Validation Set Proportion:<br><i style="color: #1e6bb8;">(non-negative float)</i>', tune_label: 'Validation Set Proportion:<br><i style="color: #1e6bb8;">(non-negative float)</i>',
               train_alert: '- Invalid validation set proportion. Must be non-negative float between 0 (inclusive) and 1.',
-              trune_alert: '- Invalid validation set proportion. Must be non-negative float between 0 (inclusive) and 1. Not a tunable parameter.' }
+              tune_alert: '- Invalid validation set proportion. Must be non-negative float between 0 (inclusive) and 1. Not a tunable parameter.' }
         ]
     },
     {
