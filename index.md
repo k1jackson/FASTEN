@@ -42,6 +42,47 @@ const FLOAT_IDS = ["learn-rate", "weight-decay", "momentum", "min-delta"];
 const PROPORTION_IDS = ["test-split", "valid-split"];
 const TUNABLE_IDS = ["hidden-layers", "hidden-size", "batch-size", "num-epochs", "learn-rate", "weight-decay", "momentum"];
 
+const DISTRIBUTION_PARAMS = {
+    Bernoulli: ['logits'],
+    Beta: ['concentration0', 'concentration1'],
+    Binomial: ['logits', 'total_count'],
+    Cauchy: ['loc', 'scale'],
+    Chi2: ['df'],
+    ContinuousBernoulli: ['logits'],
+    Exponential: ['rate'],
+    FisherSnedecor: ['df1', 'df2'],
+    Gamma: ['concentration', 'rate'],
+    Geometric: ['logits'],
+    Gumbel: ['loc', 'scale'],
+    HalfCauchy: ['scale'],
+    HalfNormal: ['scale'],
+    InverseGamma: ['concentration', 'rate'],
+    Laplace: ['loc', 'scale'],
+    LogNormal:  ['loc', 'scale'],
+    NegativeBinomial: ['logits', 'total_count'],
+    Normal: ['loc', 'scale'],
+    Poisson: ['rate'],
+    Pareto: ['scale', 'alpha'],
+    Uniform: ['low', 'high']
+};
+
+const PARAM_LABELS = {
+    loc: "Mean",
+    scale: "Std Dev",
+    logits: "Log Odds",
+    concentration: "Concentration",
+    concentration0: "Concentration 0",
+    concentration1: "Concentration 1",
+    total_count: "Total Count",
+    rate: "Rate",
+    low: "Low",
+    high: "High",
+    alpha: "Alpha",
+    df: "DF",
+    df1: "DF1",
+    df2: "DF2"
+};
+
 const modelConfig = [
     {
         group: "Training Data Split Proportions",
@@ -257,15 +298,33 @@ function renderModelParams(export_mode) {
     });
 }
 
+function renderDistParams(index, distName) {
+    const container = document.getElementById(`dist-params-${index}`);
+    if (!container) return;
+    const params = DISTRIBUTION_PARAMS[distName] || [];
+    container.innerHTML = params.map(paramName => {
+        const paramLabel = PARAM_LABELS[paramName] || paramName;
+        return `
+        <div style="margin-top: 10px; padding-left: 20px;">
+            <label style="margin-right: 5px;">Min ${paramLabel}:</label><input type="text" id="dist-param-${index}-${paramName}-min" style="width: 80px">
+            <label style="margin-right: 5px; margin-left: 10px">Max ${paramLabel}: </label><input type="text" id="dist-param-${index}-${paramName}-max" style="width: 80px">
+        </div>
+    `;}).join('');
+}
+
 dataContainer.addEventListener('change', function(event) {
+    if (event.target.classList.contains('dist-select')) {
+        const index = event.target.id.replace('dist-', '');
+        renderDistParams(index, event.target.value);
+        return;
+    }
     if (!event.target.classList.contains('param-option')) return;
 
     const radio = event.target;
     const row = radio.closest('.data-param');
     const nameEntry = row.querySelector('.name-entry');
     const typeOptions = row.querySelector('.type-options');
-    const minThreshEntry = row.querySelector('.min-thresh-entry');
-    const maxThreshEntry = row.querySelector('.max-thresh-entry');
+    const threshEntry = row.querySelector('.thresh-entry');
     const distOptions = row.querySelector('.dist-options');
 
     const isInputOrOutput = radio.checked && (radio.value === 'input' || radio.value === 'output');
@@ -273,9 +332,13 @@ dataContainer.addEventListener('change', function(event) {
 
     nameEntry.style.display = isInputOrOutput ? 'block' : 'none';
     typeOptions.style.display = isInputOrOutput ? 'block' : 'none';
-    minThreshEntry.style.display = isOutput ? 'block' : 'none';
-    maxThreshEntry.style.display = isOutput ? 'block' : 'none';
+    threshEntry.style.display = isOutput ? 'block' : 'none';
     distOptions.style.display = isOutput ? 'block' : 'none';
+    if (isOutput) {
+        const distSelect = row.querySelector('.dist-select');
+        const index = distSelect.id.replace('dist-', '');
+        renderDistParams(index, distSelect.value);
+    }
 
     const typeSelect = typeOptions.querySelector('select');
     const stringOption = typeSelect.querySelector('option[value="string"]');
@@ -329,16 +392,6 @@ document.getElementById('tsv-upload').addEventListener('change', function(event)
                     <input type="text" id="name-${index}" style="width: 400px" name="name" placeholder="${clean_header}">
                 </div>
 
-                <div id="min-thresh-input-${index}" class="min-thresh-entry" style="display: none; margin-top: 10px; padding-left: 20px;">
-                    <label for="min-thresh-${index}" style="margin-right: 5px;">Min Threshold:</label>
-                    <input type="text" id="min-thresh-${index}" style="width: 100px" name="min-thresh">
-                </div>
-
-                <div id="max-thresh-input-${index}" class="max-thresh-entry" style="display: none; margin-top: 10px; padding-left: 20px;">
-                    <label for="max-thresh-${index}" style="margin-right: 5px;">Max Threshold:</label>
-                    <input type="text" id="max-thresh-${index}" style="width: 100px" name="max-thresh">
-                </div>
-
                 <div id="type-select-${index}" class="type-options" style="display: none; margin-top: 10px; padding-left: 20px;">
                     <label for="type-${index}" style="margin-right: 5px;"><span style="color: red;">*</span> Data Type:</label>
                     <select id="type-${index}">
@@ -350,7 +403,7 @@ document.getElementById('tsv-upload').addEventListener('change', function(event)
 
                 <div id="dist-select-${index}" class="dist-options" style="display: none; margin-top: 10px; padding-left: 20px;">
                     <label for="dist-${index}" style="margin-right: 5px;"><span style="color: red;">*</span> Distribution:</label>
-                    <select id="dist-${index}">
+                    <select id="dist-${index}" class="dist-select">
                         <option value="Normal" selected>Normal</option>
                         <option value="LogNormal">LogNormal</option>
                         <option value="Exponential">Exponential</option>
@@ -374,6 +427,15 @@ document.getElementById('tsv-upload').addEventListener('change', function(event)
                         <option value="HalfCauchy">HalfCauchy</option>
                     </select>
                 </div>
+
+                <div id="thresh-input-${index}" class="thresh-entry" style="display: none; margin-top: 10px; padding-left: 20px;">
+                    <label for="min-thresh-${index}" style="margin-right: 5px;">Min Value:</label>
+                    <input type="text" id="min-thresh-${index}" style="width: 100px" name="min-thresh">
+                    <label for="max-thresh-${index}" style="margin-right: 5px; margin-left: 10px;">Max Value:</label>
+                    <input type="text" id="max-thresh-${index}" style="width: 100px" name="max-thresh">
+                </div>
+
+                <div id="dist-params-${index}" class="dist-params" style="margin-top: 8px;"></div>
             `;
 
             dataContainer.appendChild(row);
@@ -444,6 +506,33 @@ function collectAndExport() {
                 type: document.getElementById(`type-${index}`).value,
                 distribution: document.getElementById(`dist-${index}`).value
             };
+
+            const distName = document.getElementById(`dist-${index}`).value;
+            (DISTRIBUTION_PARAMS[distName] || []).forEach(paramName => {
+                const minEl = document.getElementById(`dist-param-${index}-${paramName}-min`);
+                const maxEl = document.getElementById(`dist-param-${index}-${paramName}-max`);
+                const minStr = minEl ? minEl.value.trim() : "";
+                const maxStr = maxEl ? maxEl.value.trim() : "";
+
+                let minValue = null;
+                let maxValue = null;
+                if (minStr !== "") {
+                    minValue = Number(minStr);
+                    if (isNaN(minValue)) {
+                        isValid = false;
+                        alertMessages.push(`- Invalid minimum for ${distName} parameter '${paramName}'. Must be a number.`);
+                    }
+                }
+                if (maxStr !== "") {
+                    maxValue = Number(maxStr);
+                    if (isNaN(maxValue)) {
+                        isValid = false;
+                        alertMessages.push(`- Invalid maximum for ${distName} parameter '${paramName}'. Must be a number.`);
+                    }
+                }
+                config.outputs[headerName][`min_${paramName}`] = minValue;
+                config.outputs[headerName][`max_${paramName}`] = maxValue;
+            });
             outputCount++;
         }
     });
