@@ -19,7 +19,7 @@
 # in the templates via {{ site.myvariable }}.
 
 title: FASTEN Configuration File Designer
-baseurl: "/FASTEN-config-designer" 
+baseurl: "/FASTEN-config-designer/docs" 
 url: "https://k1jackson.github.io"
 email: k1jackson@ucsd.edu
 # description: >- # this means to ignore newlines until "baseurl:"
