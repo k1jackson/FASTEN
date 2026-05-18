@@ -150,7 +150,7 @@ const modelConfig = [
         group: "Optimizer Parameters",
         params: [
             { id: "loss-func", type: "select", options: ["NLL", "MSE", "KLD"],
-              train_label: 'Loss Function:', tune_label: 'Loss Function' },
+              train_label: 'Loss Function:', tune_label: 'Loss Function:' },
             { id: "optimizer", type: "select", options: ["AdamW", "Adam", "RMSprop", "SGD"],
               train_label: 'Optimization Algorithm:',
               tune_label: 'Optimization Algorithm:<br><i style="color: #1e6bb8;">(select one or more)</i>' },
