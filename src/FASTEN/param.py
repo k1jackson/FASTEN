@@ -12,7 +12,7 @@ class ModelParam():
     def __init__(self, output: ModelOutput, label: str): 
         self.base: str = label.replace("0", "").replace("1", "")
         self.label: str = f"{output.label}_{label}"
-        self.name: str = f"{output.name} {label.replace("_", " ").title()}"
+        self.name: str = f"{output.name} {label.replace('_', ' ').title()}"
         self.priors = Constraint(output, self.base)
         self.constraints = deepcopy(self.priors)
 

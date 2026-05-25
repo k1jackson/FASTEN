@@ -1,10 +1,11 @@
-from .common import torch, os, tqdm, shutil
+from .common import torch, os, shutil
 from .learn import *
 from .data import Dataset
 from .model import Model
+from rich import progress
 
 
-class Trainer():
+class Trainer():    
     def __init__(self, model: Model):
         self.model: Model = model
         self.dataset: Dataset = Dataset()
@@ -38,12 +39,17 @@ class Trainer():
 
     def execute(self): 
         self.load_args()
-        for _ in tqdm(range(self.model.args.num_epochs)):
-            if self.train: self.train_model()
-            if self.valid: self.test_model(valid = True)
-            if self.valid and self.model.args.early_stop:
-                loss = self.valid.loss[-1]
-                if self.early_stop(loss): break
+        loadbar = progress.Progress(progress.TextColumn("{task.description}"), progress.BarColumn(), 
+                                    progress.MofNCompleteColumn(), progress.TimeRemainingColumn())
+        with loadbar as load:
+            task = load.add_task("", total = self.model.args.num_epochs)
+            for _ in range(self.model.args.num_epochs):
+                if self.train: self.train_model()
+                if self.valid: self.test_model(valid = True)
+                if self.valid and self.model.args.early_stop:
+                    loss = self.valid.loss[-1]
+                    if self.early_stop(loss): break
+                load.update(task, advance = 1)
         if self.test: self.test_model(valid = False)
 
     def train_model(self):
@@ -52,7 +58,8 @@ class Trainer():
         for x, y in self.train.dataloader:
             self.optimizer.zero_grad()
             y_pred = self.model.network(x)
-            loss = self.criterion(y_pred, y)
+            try: loss = self.criterion(y_pred, y)
+            except ValueError: raise ValueError("Training diverged: loss is NaN (possible exploding gradients)")
             train_loss += loss.item()
             loss.backward()
             self.optimizer.step()

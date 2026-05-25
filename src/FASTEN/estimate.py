@@ -1,8 +1,15 @@
-from .common import np, pd, torch, F, os, tqdm
+from .common import np, pd, torch, F, os
 from .param import ModelDist, Constraint
 from .config import ModelOutput
 from pandas.api.typing import DataFrameGroupBy
+from rich import progress
 
+PROGRESS = progress.Progress(
+    progress.TextColumn("{task.description}"),
+    progress.BarColumn(),
+    progress.MofNCompleteColumn(),
+    progress.TimeRemainingColumn(),
+)
 
 class Estimator(): 
 
@@ -75,13 +82,16 @@ class Estimator():
 
     def execute(self, groups: DataFrameGroupBy) -> pd.DataFrame:
         torch.set_num_threads(os.cpu_count())
-        params = [self.parallelize(groups, label) for label in self.outputs]
+        with PROGRESS as progress:
+            params = [self.iterate(groups, label, progress) for label in self.outputs]
         return pd.concat(params, axis = 1)
     
-    def parallelize(self, total_groups: DataFrameGroupBy, label: str) -> pd.DataFrame:
+    def iterate(self, total_groups: DataFrameGroupBy, label: str, progress: progress.Progress) -> pd.DataFrame:
         output, groups, params = self.outputs[label], total_groups[label], dict()
-        for group, data in tqdm(groups, desc = output.name):
+        task = progress.add_task(output.name, total = groups.ngroups)
+        for group, data in groups:
             params[group] = self.estimate(output, data)
+            progress.update(task, advance = 1)
         return pd.DataFrame.from_dict(params, "index", None, output.dist.params).sort_index()
         
     def estimate(self, output: ModelOutput, data: pd.Series) -> np.ndarray: 
@@ -89,7 +99,7 @@ class Estimator():
             method = getattr(self.Moments, output.dist.name)
             try: return method(data).numpy()
             except AssertionError: pass
-        return self.max_likelihood(output.dist, torch.from_numpy(data.values))
+        return self.max_likelihood(output.dist, torch.tensor(data.values))
 
     def max_likelihood(self, dist: ModelDist, data: torch.Tensor) -> np.ndarray: 
         self.load_constraints(dist, data)

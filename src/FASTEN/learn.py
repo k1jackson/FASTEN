@@ -11,15 +11,13 @@ def KL_negative_binomial(p, q, n_stds = 3, memory_chunk = int(1e5)):
     log_q = F.logsigmoid(q.logits)
     log_neg_p = F.logsigmoid(-p.logits)
     log_neg_q = F.logsigmoid(-q.logits)
-    prob_p = torch.sigmoid(p.logits)
-    mean_p = p.total_count * prob_p / (1 - prob_p)
+    mean_p = p.total_count * torch.exp(p.logits)
     term = mean_p * (log_p - log_q)
-    term.nan_to_num_(nan = 0.0)
     kld_exact = term + p.total_count * (log_neg_p - log_neg_q)
     if comparable.all(): return kld_exact
 
-    var_p = mean_p / (1 - prob_p)
-    std_p = torch.sqrt(var_p)
+    log_mean_p = torch.log(p.total_count) + p.logits
+    std_p = torch.exp(0.5 * (log_mean_p - log_neg_p))
     max_k = torch.ceil(mean_p + n_stds * std_p).nan_to_num_(posinf = 1e20)
     min_k = torch.clamp(torch.floor(mean_p - n_stds * std_p), min = 0.0)
     max_steps = int((max_k - min_k).max().item()) + 1
@@ -38,7 +36,6 @@ def KL_negative_binomial(p, q, n_stds = 3, memory_chunk = int(1e5)):
         log_prob_q = q.log_prob(k_valid)
         kld = torch.exp(log_prob_p) * (log_prob_p - log_prob_q)
         kld = torch.where(step_range, kld, torch.zeros_like(kld))
-        kld.nan_to_num_(nan = 0.0)
         kld_approx += torch.sum(kld, dim = 0)
     return torch.where(comparable, kld_exact, kld_approx)
 
@@ -52,7 +49,6 @@ def KL_binomial(p, q, n_stds = 3, memory_chunk = int(1e5)):
     prob_p = torch.sigmoid(p.logits)
     mean_p = p.total_count * prob_p
     term = mean_p * (log_p - log_q)
-    term.nan_to_num_(nan = 0.0)
     kld_exact = term + (p.total_count - mean_p) * (log_neg_p - log_neg_q)
     if comparable.all(): return kld_exact
 
@@ -79,7 +75,6 @@ def KL_binomial(p, q, n_stds = 3, memory_chunk = int(1e5)):
         kld = torch.exp(log_prob_p) * (log_prob_p - log_prob_q)
         kld = torch.where(k_expanded <= p.total_count, kld, torch.zeros_like(kld))
         kld = torch.where(step_range, kld, torch.zeros_like(kld))
-        kld.nan_to_num_(nan = 0.0)
         kld_approx += torch.sum(kld, dim = 0)
     return torch.where(comparable, kld_exact, kld_approx)
 
@@ -151,8 +146,8 @@ class Loss(nn.Module):
             case "NLL": return self.neg_log_likelihood(pred_unscaled, true_scaled).mean()
 
     def evaluate(self, pred: Dataset, true: Dataset, dependent: bool) -> list[torch.Tensor, torch.Tensor, torch.Tensor]:
-        pred_stats_unscaled = torch.from_numpy(pred.stats.outputs.values)
-        true_stats_unscaled = torch.from_numpy(true.stats.outputs.values)
+        pred_stats_unscaled = torch.tensor(pred.stats.outputs.values)
+        true_stats_unscaled = torch.tensor(true.stats.outputs.values)
         pred_stats_scaled = (pred_stats_unscaled - self.min) / self.range
         true_stats_scaled = (true_stats_unscaled - self.min) / self.range
         mse = self.mean_squared_error(pred_stats_scaled, true_stats_scaled)
@@ -162,7 +157,7 @@ class Loss(nn.Module):
         nll = torch.zeros((sample_groups.ngroups, pred.samples.outputs.shape[1]), dtype = float)
         for i, sample_group in sample_groups:
             pred_stats = pred_stats_unscaled[i].unsqueeze(0).repeat(len(sample_group), 1)
-            true_samples = torch.from_numpy(sample_group.values)
+            true_samples = torch.tensor(sample_group.values)
             nll[i] = self.neg_log_likelihood(pred_stats, true_samples)
         return mse, kld, nll
     

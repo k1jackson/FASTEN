@@ -67,7 +67,7 @@ def plot_tune(tuner, figure_dir):
 
 
 def plot_predict(predictor, figure_dir): 
-    if predictor.true is None: return
+    if predictor.true is None: return None, None, None
     predictor.execute()
     mse, kld, nll = predictor.evaluate()
     if not os.path.exists(figure_dir): 
@@ -95,7 +95,7 @@ def plot_samples(predictor, figure_dir, points = 10000, n_samples = 10):
         for label, (x, y) in {"true": true, "pred": pred}.items():
             dataset = getattr(predictor, label)
             stats = dataset.stats.outputs.iloc[samples,mask]
-            params = torch.from_numpy(stats.values)
+            params = torch.tensor(stats.values)
             fit = output.dist.base(*params.unbind(dim = 1))
             lower = output.dist.support.get_bound("lower", output.dist.params, params, fit)
             upper = output.dist.support.get_bound("upper", output.dist.params, params, fit)
@@ -134,7 +134,7 @@ def plot_statistics(predictor, figure_dir):
     for j, output in enumerate(predictor.model.outputs.values()):
         mask = [param in output.dist.params for param in predictor.model.params]
         stats = predictor.pred.stats.outputs.iloc[:,mask]
-        params = torch.from_numpy(stats.values)
+        params = torch.tensor(stats.values)
         fit = output.dist.base(*params.unbind(dim = 1))
         pred_means, pred_vars = fit.mean, fit.variance
         true_means = torch.zeros(groups.ngroups)

@@ -5,6 +5,7 @@ from .predict import Predictor
 from copy import deepcopy
 import optuna
 
+
 class Tuner:
     def __init__(self, trainer: Trainer):
         self.trainer = trainer
@@ -32,13 +33,14 @@ class Tuner:
             os.mkdir(f"{output_dir}/plots")
             os.mkdir(f"{output_dir}/plots/trials")
         storage_name = f"sqlite:///{output_dir}/{study_name}.db"
-        sampler = optuna.samplers.TPESampler(constant_liar = True)
+        sampler = optuna.samplers.TPESampler()
         self.study = optuna.create_study(study_name = study_name, storage = storage_name, 
             load_if_exists = True, direction = "minimize", sampler = sampler)       
     
     def execute(self, n_trials: int):
         if not n_trials: return
-        self.study.optimize(Objective(self), n_trials = n_trials, catch = (ValueError, OverflowError))
+        while len(self.study.get_trials(states = [optuna.trial.TrialState.COMPLETE])) < n_trials:
+            self.study.optimize(Objective(self), n_trials = 1, catch = (ValueError, OverflowError))
 
 
 class Objective:
@@ -57,7 +59,10 @@ class Objective:
             if not isinstance(value, list): trial_train[arg] = value
             else: trial_train[arg] = trial.suggest_categorical(arg, value)
         self.model.validate_args(trial_model, trial_train)
-        self.trainer.execute()
+        try: self.trainer.execute()
+        except ValueError: 
+            message = "Training diverged: loss is NaN (possible exploding gradients)"
+            raise optuna.exceptions.TrialPruned(message)
         
         plot_train(self.trainer, f"{self.trial_dir}/trial_{trial.number}")
         predictor = Predictor(self.model, deepcopy(self.trainer.test.dataset))

@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "FASTEN"
 version = "0.1.0"
 dependencies = ["pandas", "torch", "numpy>=2.1.1", "scipy>=1.14.0", "scikit-learn", 
-                "matplotlib", "optuna", "tqdm", "pydantic>=2.0", "k-means-constrained"]
+                "matplotlib", "optuna", "rich", "pydantic>=2.0", "k-means-constrained"]
 
 [project.scripts]
 FASTEN = "FASTEN.cli:main"

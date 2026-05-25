@@ -97,6 +97,9 @@ const modelConfig = [
               tune_label: 'Validation Set Proportion:<br><i style="color: #1e6bb8;">(non-negative float)</i>',
               train_alert: '- Invalid validation set proportion. Must be non-negative float between 0 (inclusive) and 1.',
               tune_alert: '- Invalid validation set proportion. Must be non-negative float between 0 (inclusive) and 1. Not a tunable parameter.' }
+            { id: "rand-seed", train_only: true, train_placeholder: "0", tune_placeholder: null,
+              train_label: 'Random Seed:<br><i style="color: #1e6bb8;">(non-negative integer)</i>',
+              train_alert: '- Invalid random seed. Must be non-negative integer.' }
         ]
     },
     {
@@ -180,6 +183,9 @@ function buildOptionsHtml(options) {
 function validateNumericParam(paramId, value, isTrainMode) {
     const num = Number(value);
 
+    if (paramId === 'rand-seed') {
+        return (Number.isInteger(num) && num >= 0) ? num : null;
+    }
     if (INTEGER_IDS.includes(paramId)) {
         return (Number.isInteger(num) && num > 0) ? num : null;
     }
@@ -235,6 +241,7 @@ function renderModelParams(export_mode) {
         sectionRow.appendChild(header);
 
         section.params.forEach(param => {
+            if (param.train_only && export_mode === 'Tune') return;
             const row = document.createElement('div');
             row.id = `${param.id}-row`;
             row.style.marginTop = "10px";
@@ -279,6 +286,16 @@ function renderModelParams(export_mode) {
     const momentumRow = document.getElementById('momentum-row');
     const patienceRow = document.getElementById('patience-row');
     const minDeltaRow = document.getElementById('min-delta-row');
+    const lossFuncSelect = document.getElementById('loss-func');
+    const batchSizeInput = document.getElementById('batch-size');
+
+    if (lossFuncSelect && batchSizeInput && export_mode === 'Train') {
+        const updateBatchSizePlaceholder = () => {
+            batchSizeInput.placeholder = (lossFuncSelect.value === 'NLL') ? '1024' : '32';
+        };
+        updateBatchSizePlaceholder();
+        lossFuncSelect.addEventListener('change', updateBatchSizePlaceholder);
+    }
 
     optimizerSelect.options[0].selected = true;
     architectureSelect.options[0].selected = true;

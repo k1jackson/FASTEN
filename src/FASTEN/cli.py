@@ -3,7 +3,9 @@ from .train import Trainer
 from .predict import Predictor
 from .tune import Tuner
 from .plot import plot_train, plot_predict, plot_tune
-import argparse, tracemalloc, time
+from .common import pd
+from rich.console import Console
+import argparse, time
 
 def parse_args():
     superparser = argparse.ArgumentParser(description = "A flexible software framework to approximate computationally \
@@ -30,23 +32,30 @@ def parse_args():
     predict.add_argument("-n", "--runs", default = 0, type = int, help = "Number of simulation runs per input")
     return superparser.parse_args()
 
-def train(args):
+def train(args, console):
     model = Model(config_file = args.config, 
                   model_file = args.model)
     trainer = Trainer(model)
+    console.log("Estimating distribution parameters...")
     trainer.load_data(args.input)
+    console.log("Training neural network...")
     trainer.execute()
+    console.log("Writing outputs...")
     trainer.dump_model(args.output)
 
     plot_train(trainer, f"{args.output}/plots/training")
     predictor = Predictor(model, trainer.train.dataset)
-    plot_predict(predictor, f"{args.output}/plots/training")
+    mse, kld, _ = plot_predict(predictor, f"{args.output}/plots/training")
+    console.print(f"Average Training MSE = {mse.mean().mean():.3g}\nAverage Training KL Divergence = {kld.mean().mean():.3g}")
     if not trainer.test: return
     predictor = Predictor(model, trainer.test.dataset)
-    plot_predict(predictor, f"{args.output}/plots/testing")
+    mse, kld, _ = plot_predict(predictor, f"{args.output}/plots/testing")
+    if isinstance(mse, pd.DataFrame): 
+        console.print(f"Average Testing MSE = {mse.mean().mean():.3g}\nAverage Testing KL Divergence = {kld.mean().mean():.3g}")
 
-def predict(args): 
+def predict(args, console): 
     model = Model(model_file = args.model)
+    console.log("Predicting outputs...")
     predictor = Predictor(model)
     predictor.load_inputs(args.input, args.runs)
     predictor.execute()
@@ -54,31 +63,32 @@ def predict(args):
     if args.runs: predictor.dump_samples(args.output)
     else: predictor.dump_statistics(args.output)
 
-def tune(args): 
+def tune(args, console): 
     model = Model(config_file = args.config)
     trainer = Trainer(model)
     if args.trials:
+        console.log("Estimating distribution parameters...")
         trainer.load_data(args.input)
 
+    console.log("Tuning hyperparameters...")
     tuner = Tuner(trainer)
     tuner.load_study(args.output)
     tuner.execute(args.trials)
+
+    console.log("Writing outputs...")
     tuner.dump_trials(args.output)
     plot_tune(tuner, f"{args.output}/plots")
 
 def main():
     args = parse_args()
-    # tracemalloc.start()
     start = time.perf_counter()
+    console = Console()
     match args.command:
-        case "train": train(args)
-        case "predict": predict(args)
-        case "tune": tune(args)
-    runtime = time.perf_counter() - start
-    # _, memory = tracemalloc.get_traced_memory()
-    # tracemalloc.stop()
-    if runtime < 60: print(f"Total Runtime: {runtime:.2f} s")
-    elif runtime < 60 * 60: print(f"Total Runtime: {runtime / 60:.2f} m")
-    else: print(f"Total Runtime: {runtime / (60 * 60):.2f} h")
-    # print(f"Peak Memory: {(memory / (1024 * 1024)):.2f} MB")
-        
+        case "train": train(args, console)
+        case "predict": predict(args, console)
+        case "tune": tune(args, console)
+    end = time.perf_counter()
+    if end - start < 60: runtime = f"{(end - start):.2f} s"
+    elif end - start < 60 * 60: runtime = f"{(end - start) / 60:.2f} m"
+    else: runtime = f"{(end - start) / (60 * 60):.2f} h"
+    console.log(f"Done in {runtime}")

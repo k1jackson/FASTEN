@@ -1,9 +1,8 @@
 from __future__ import annotations
-from .common import pd, np, torch, os
+from .common import pd, np, torch
 from .data import Samples, Statistics, Dataset
 from .learn import Loss
 from .model import Model
-from .plot import plot_predict
 
 
 class Predictor():
@@ -33,7 +32,6 @@ class Predictor():
         self.pred.stats = self.predict_stats()
         self.pred.stats.unscale_inputs(self.model.input_scaler)
         self.pred.stats.unscale_outputs(self.model.param_scaler)
-        self.true.stats.unscale_inputs(self.model.input_scaler)
         if isinstance(self.true.stats.outputs, pd.DataFrame): 
             self.true.stats.unscale_outputs(self.model.param_scaler)
         self.pred.samples = self.predict_samples()
@@ -50,7 +48,7 @@ class Predictor():
     def predict_stats(self) -> Statistics:
         self.model.network.eval()
         inputs = self.true.stats.inputs.values
-        x = torch.from_numpy(inputs).to(self.model.args.device)
+        x = torch.tensor(inputs).to(self.model.args.device)
         with torch.no_grad(): y = self.model.network(x)
         outputs = y.detach().cpu().numpy()
         params = pd.DataFrame(outputs, columns = self.model.params)
@@ -62,7 +60,7 @@ class Predictor():
         for label, output in self.model.outputs.items():
             mask = [param in output.dist.params for param in self.model.params]
             stats = self.pred.stats.outputs.iloc[index, mask]
-            params = torch.from_numpy(stats.values)
+            params = torch.tensor(stats.values)
             fit = output.dist.base(*params.unbind(dim = 1))
             outputs[label] = fit.sample().numpy()
         return Samples(self.true.samples.inputs, outputs)
