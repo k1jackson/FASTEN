@@ -23,7 +23,8 @@ def parse_args():
     tune.add_argument("-c", "--config", required = True, help = "JSON file defining configuration parameters")
     tune.add_argument("-i", "--input", required = True, help = "TSV file with simulation data")
     tune.add_argument("-o", "--output", default = "outputs", help = "Folder to output optimal configs and figures")
-    tune.add_argument("-n", "--trials", type = int, default = 50, help = "Number of optimization trials")
+    tune.add_argument("-n", "--trials", type = int, default = 100, help = "Total number of optimation trials")
+    tune.add_argument("--unique", action = "store_true", help = "Prevents re-training with duplicate hyperparameter sets")
     predict = subparsers.add_parser("predict", description = "Predicts simulation data from inputs with emulator", 
                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     predict.add_argument("-m", "--model", required = True, help = "ZIP file containing model")
@@ -73,7 +74,7 @@ def tune(args, console):
     console.log("Tuning hyperparameters...")
     tuner = Tuner(trainer)
     tuner.load_study(args.output)
-    tuner.execute(args.trials)
+    tuner.execute(args.trials, args.unique)
 
     console.log("Writing outputs...")
     tuner.dump_trials(args.output)

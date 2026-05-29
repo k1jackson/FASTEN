@@ -42,15 +42,16 @@ def plot_tune(tuner, figure_dir):
     plt.close()
 
     trials = tuner.study.trials_dataframe()
-    trials = trials.loc[trials["state"] == "COMPLETE"].reset_index(drop = True)
-    plt.figure(figsize = (3 * len(params), 3))
+    plt.figure(figsize = (3 * len(params), 3.5))
     for i, param in enumerate(params):
         plt.subplot(1, len(params), i+1)
         for value, group in trials.groupby(f"params_{param}"):
             x, y = np.repeat(str(value), len(group)), group["value"]
             plt.scatter(x, y, alpha = 0.5, linewidths = 0, color = "C0")
+            if y.max() - y.min() > 100: plt.yscale("log")
         plt.xlabel(param)
         plt.ylabel("Loss")
+        plt.xticks(rotation = 45, ha = "right")
     plt.tight_layout()
     plt.savefig(f"{figure_dir}/slices_plot.png", dpi = 200)
     plt.close()
@@ -58,6 +59,7 @@ def plot_tune(tuner, figure_dir):
     best = [trials.loc[:i+1, "value"].min() for i in range(len(trials))]
     plt.figure(figsize = (8, 4))
     plt.scatter(range(len(trials)), trials["value"], color = "C0")
+    if trials["value"].max() - trials["value"].min() > 100: plt.yscale("log")
     plt.plot(range(len(trials)), best, color = "C3")
     plt.xlabel("Trial")
     plt.ylabel("Loss")

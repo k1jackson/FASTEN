@@ -1,6 +1,6 @@
 from .common import pd, torch
 from .param import ModelDist
-from typing import Literal, Self
+from typing import Literal
 from warnings import warn
 import pydantic as pdc
 
@@ -43,13 +43,13 @@ class ModelArgs(pdc.BaseModel):
         return getattr(torch.optim, value)
     
     @pdc.model_validator(mode = "after")
-    def validate_early_stop(self) -> Self:
+    def validate_early_stop(self):
         if not self.valid_split and self.early_stop:
             raise ValueError("Non-empty validation set required for early stopping.")
         return self
     
     @pdc.model_validator(mode = "after")
-    def validate_splits(self) -> Self:
+    def validate_splits(self):
         if self.valid_split + self.test_split >= 1:
             raise ValueError("Non-empty training set required. Decrease size of validation or testing set.")
         return self
@@ -92,7 +92,7 @@ class ModelOutput(pdc.BaseModel): # validate priors
         return dist
     
     @pdc.model_validator(mode = "after")
-    def validate_discrete(self) -> Self:
+    def validate_discrete(self):
         if self.dist.support.discrete and self.type != "integer":
             raise ValueError(f"Discrete distribution specified for non-integer training data: {self.name}.")
         return self
