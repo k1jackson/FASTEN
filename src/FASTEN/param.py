@@ -46,22 +46,22 @@ class ModelDist():
 
     @staticmethod
     def Bernoulli(logits: float | torch.Tensor) -> Bernoulli:
-        return Bernoulli(logits = logits)
+        return Bernoulli(logits = logits, validate_args = False)
     @staticmethod
     def ContinuousBernoulli(logits: float | torch.Tensor) -> ContinuousBernoulli:
-        return ContinuousBernoulli(logits = logits)
+        return ContinuousBernoulli(logits = logits, validate_args = False)
     @staticmethod
     def Geometric(logits: float | torch.Tensor) -> Geometric:
-        return Geometric(logits = logits)
+        return Geometric(logits = logits, validate_args = False)
     @staticmethod
     def Binomial(total_count: float | torch.Tensor, logits: float | torch.Tensor) -> Binomial:
         if isinstance(total_count, torch.Tensor):
             rounded_total_count = total_count + (total_count.round() - total_count).detach()
-            return Binomial(rounded_total_count, logits = logits)
-        else: return Binomial(round(total_count), logits = logits)
+            return Binomial(rounded_total_count, logits = logits, validate_args = False)
+        else: return Binomial(round(total_count), logits = logits, validate_args = False)
     @staticmethod
     def NegativeBinomial(total_count: int | torch.Tensor, logits: float | torch.Tensor) -> NegativeBinomial:
-        return NegativeBinomial(total_count, logits = logits)
+        return NegativeBinomial(total_count, logits = logits, validate_args = False)
 
 
 class Constraint():

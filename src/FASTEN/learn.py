@@ -4,79 +4,62 @@ from .model import Model
 from torch.distributions import NegativeBinomial, Binomial
 from torch.distributions.kl import register_kl
 
+
+MAX_STEPS = 100000
+MAX_SIZE = 4 * 1024**2
+
 @register_kl(NegativeBinomial, NegativeBinomial)
-def KL_negative_binomial(p, q, n_stds = 3, memory_chunk = int(1e5)): 
-    comparable = torch.isclose(p.total_count, q.total_count)
-    log_p = F.logsigmoid(p.logits)
-    log_q = F.logsigmoid(q.logits)
-    log_neg_p = F.logsigmoid(-p.logits)
-    log_neg_q = F.logsigmoid(-q.logits)
+def KL_negative_binomial(p, q): 
+    log_p, log_q = F.logsigmoid(p.logits), F.logsigmoid(q.logits)
+    log_neg_p, log_neg_q = F.logsigmoid(-p.logits), F.logsigmoid(-q.logits)
+    d_log, d_log_neg = log_p - log_q, log_neg_p - log_neg_q
     mean_p = p.total_count * torch.exp(p.logits)
-    term = mean_p * (log_p - log_q)
-    kld_exact = term + p.total_count * (log_neg_p - log_neg_q)
-    if comparable.all(): return kld_exact
-
+    kld_exact = mean_p * d_log + p.total_count * d_log_neg
     log_mean_p = torch.log(p.total_count) + p.logits
-    std_p = torch.exp(0.5 * (log_mean_p - log_neg_p))
-    max_k = torch.ceil(mean_p + n_stds * std_p).nan_to_num_(posinf = 1e20)
-    min_k = torch.clamp(torch.floor(mean_p - n_stds * std_p), min = 0.0)
-    max_steps = int((max_k - min_k).max().item()) + 1
-    max_k, min_k = max_k.unsqueeze(0), min_k.unsqueeze(0)
-
-    kld_approx = torch.zeros_like(mean_p)
-    for i in range(0, max_steps, memory_chunk):
-        chunk_end = min(i + memory_chunk, max_steps)
-        delta_chunk = torch.arange(i, chunk_end, device = p.logits.device, dtype = p.logits.dtype)
-        delta_expanded = delta_chunk.view(*([-1] + [1] * len(p.batch_shape)))
-        k_expanded = min_k + delta_expanded
-        step_range = (k_expanded <= max_k)
-        k_valid = torch.where(step_range, k_expanded, min_k)
-
-        log_prob_p = p.log_prob(k_valid)
-        log_prob_q = q.log_prob(k_valid)
-        kld = torch.exp(log_prob_p) * (log_prob_p - log_prob_q)
-        kld = torch.where(step_range, kld, torch.zeros_like(kld))
-        kld_approx += torch.sum(kld, dim = 0)
-    return torch.where(comparable, kld_exact, kld_approx)
+    std_p = torch.exp((log_mean_p - log_neg_p) / 2)
+    return approximate_KL(p, q, mean_p, std_p, kld_exact)
 
 @register_kl(Binomial, Binomial)
-def KL_binomial(p, q, n_stds = 3, memory_chunk = int(1e5)): 
+def KL_binomial(p, q): 
+    log_p, log_q = F.logsigmoid(p.logits), F.logsigmoid(q.logits)
+    log_neg_p, log_neg_q = F.logsigmoid(-p.logits), F.logsigmoid(-q.logits)
+    d_log, d_log_neg = log_p - log_q, log_neg_p - log_neg_q
+    mean_p = p.total_count * torch.sigmoid(p.logits)
+    kld_exact = mean_p * d_log + (p.total_count - mean_p) * d_log_neg
+    std_p = torch.sqrt(mean_p * (1 - torch.sigmoid(p.logits)))
+    return approximate_KL(p, q, mean_p, std_p, kld_exact)
+
+def approximate_KL(p, q, mean_p, std_p, kld_exact, n_stds = 6):
     comparable = torch.isclose(p.total_count, q.total_count)
-    log_p = F.logsigmoid(p.logits)
-    log_q = F.logsigmoid(q.logits)
-    log_neg_p = F.logsigmoid(-p.logits)
-    log_neg_q = F.logsigmoid(-q.logits)
-    prob_p = torch.sigmoid(p.logits)
-    mean_p = p.total_count * prob_p
-    term = mean_p * (log_p - log_q)
-    kld_exact = term + (p.total_count - mean_p) * (log_neg_p - log_neg_q)
     if comparable.all(): return kld_exact
 
-    var_p = mean_p * (1 - prob_p)
-    std_p = torch.sqrt(var_p)
-
-    max_k = torch.clamp(torch.ceil(mean_p + n_stds * std_p), max = p.total_count)
+    max_k = torch.ceil(mean_p + n_stds * std_p)
     min_k = torch.clamp(torch.floor(mean_p - n_stds * std_p), min = 0.0)
-    max_steps = int((max_k - min_k).max().item()) + 1
-    max_k, min_k = max_k.unsqueeze(0), min_k.unsqueeze(0)
-    
+    zeros, ones = torch.zeros_like(std_p), torch.ones_like(std_p)
+    total_size = torch.where(comparable, zeros, max_k - min_k)
+    integer_size = torch.floor(total_size) + 1
+    n_steps = int(max(1, min(integer_size.max().item(), MAX_STEPS)))
+
+    max_width = total_size / max(n_steps - 1, 1)
+    width = torch.where(total_size > n_steps, max_width, ones)
+    full = torch.full_like(total_size, n_steps)
+    valid = torch.where(total_size > n_steps, full, integer_size)
+    size = int(max(1, min(MAX_SIZE, n_steps)))
+
     kld_approx = torch.zeros_like(mean_p)
-    for i in range(0, max_steps, memory_chunk):
-        chunk_end = min(i + memory_chunk, max_steps)
-        delta_chunk = torch.arange(i, chunk_end, device = p.logits.device, dtype = p.logits.dtype)
-        delta_expanded = delta_chunk.view(*([-1] + [1] * len(p.batch_shape)))
-        k_expanded = min_k + delta_expanded
-        step_range = (k_expanded <= max_k)
-        k_p_expanded = torch.min(torch.where(step_range, k_expanded, min_k), p.total_count)
-        k_q_expanded = torch.min(torch.where(step_range, k_expanded, min_k), q.total_count)
-        
-        log_prob_p = p.log_prob(k_p_expanded)
-        log_prob_q = q.log_prob(k_q_expanded)
-        kld = torch.exp(log_prob_p) * (log_prob_p - log_prob_q)
-        kld = torch.where(k_expanded <= p.total_count, kld, torch.zeros_like(kld))
-        kld = torch.where(step_range, kld, torch.zeros_like(kld))
+    min_k, valid = min_k.unsqueeze(0), valid.unsqueeze(0)
+    width = width.unsqueeze(0)
+    for i in range(0, n_steps, size):
+        j = min(i + size, n_steps)
+        shape = [-1] + [1] * len(mean_p.shape)
+        delta = torch.arange(i, j, device = p.logits.device).view(shape)
+        k = torch.where(delta < valid, min_k + delta * width, min_k)
+        log_prob_p, log_prob_q = p.log_prob(k), q.log_prob(k)        
+        kld = torch.exp(log_prob_p) * (log_prob_p - log_prob_q) * width
+        kld = torch.where(delta < valid, kld, torch.zeros_like(kld))
         kld_approx += torch.sum(kld, dim = 0)
     return torch.where(comparable, kld_exact, kld_approx)
+
 
 class Partition(): 
     def __init__(self, dataset: Dataset, loss_func: str):
