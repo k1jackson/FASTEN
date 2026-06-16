@@ -17,5 +17,5 @@ FASTEN = "FASTEN.cli:main"
 "Bug Tracker" = "https://github.com/k1jackson/FASTEN/issues"
 "Config Designer" = "https://k1jackson.github.io/FASTEN/"
 
-[tools.hatch.build.targets.wheel]
+[tool.hatch.build.targets.wheel]
 packages = ["src/FASTEN"]
