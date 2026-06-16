@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "FASTEN"
+name = "FASTEN-cli"
 version = "1.0.0"
 readme = "README.md"
 dependencies = ["pandas", "torch", "numpy>=2.1.1", "scipy>=1.14.0", "scikit-learn", 

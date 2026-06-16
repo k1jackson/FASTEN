@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/FASTEN
+      url: https://pypi.org/p/fasten-cli
     permissions:
       id-token: write
 

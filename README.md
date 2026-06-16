@@ -16,7 +16,7 @@ FASTEN is a flexible and user-friendly framework for building PyTorch-based deep
 FASTEN can be installed via ```pip```:
 
 ```bash
-pip install FASTEN
+pip install fasten-cli
 ```
 
 ## Usage
