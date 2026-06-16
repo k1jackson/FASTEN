@@ -4,12 +4,18 @@ build-backend = "hatchling.build"
 
 [project]
 name = "FASTEN"
-version = "0.1.0"
+version = "1.0.0"
+readme = "README.md"
 dependencies = ["pandas", "torch", "numpy>=2.1.1", "scipy>=1.14.0", "scikit-learn", 
                 "matplotlib", "optuna", "rich", "pydantic>=2.0", "k-means-constrained"]
 
 [project.scripts]
 FASTEN = "FASTEN.cli:main"
+
+[project.urls]
+"Homepage" = "https://github.com/k1jackson/FASTEN"
+"Bug Tracker" = "https://github.com/k1jackson/FASTEN/issues"
+"Config Designer" = "https://k1jackson.github.io/FASTEN/"
 
 [tools.hatch.build.targets.wheel]
 packages = ["src/FASTEN"]
