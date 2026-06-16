@@ -8,7 +8,7 @@ COLORS = {"logits": "C6", "total_count": "C4", "rate": "C3",
 
 def plot_train(trainer, figure_dir):
     if not os.path.exists(figure_dir): os.mkdir(figure_dir)
-    plt.figure(dpi = 200, figsize = (6, 4))
+    plt.figure(figsize = (6, 4))
     plt.plot(range(len(trainer.train.loss)), trainer.train.loss, 
         color = "blue", alpha = 0.5, label = "Training", zorder = 2)
     max_val = max(trainer.train.loss)
@@ -25,7 +25,7 @@ def plot_train(trainer, figure_dir):
         plt.plot([], [])
         plt.axis("off")
     plt.tight_layout()
-    plt.savefig(f"{figure_dir}/loss_curve_plot.png")
+    plt.savefig(f"{figure_dir}/loss_curve_plot.png", dpi = 200)
     plt.close()
 
 def plot_tune(tuner, figure_dir):
@@ -106,7 +106,7 @@ def plot_samples(predictor, figure_dir, points = 10000, n_samples = 10):
             y[j] = torch.exp(fit.log_prob(x[j]))
     
     for i, sample in enumerate(samples):
-        plt.figure(dpi = 200, figsize = (2.5 * cols + 0.5, 2))
+        plt.figure(figsize = (2.5 * cols + 0.5, 2))
         group = groups.get_group(sample)
         for j, output in enumerate(predictor.model.outputs.values()):
             plt.subplot(1, cols, j + 1)
@@ -125,7 +125,7 @@ def plot_samples(predictor, figure_dir, points = 10000, n_samples = 10):
             plt.xticks(fontsize = 8)
             plt.yticks(fontsize = 8)
         plt.tight_layout()
-        plt.savefig(f"{sample_dir}/sample_plot_{sample}.png")
+        plt.savefig(f"{sample_dir}/sample_plot_{sample}.png", dpi = 200)
         plt.close()
 
 def plot_statistics(predictor, figure_dir):
@@ -170,13 +170,13 @@ def plot_statistics(predictor, figure_dir):
         plt.ylabel(f"Predicted Variance")
         plt.xlabel(f"Empirical Variance")
     plt.tight_layout(rect = [0, 0, 0.99, 1])
-    plt.savefig(f"{figure_dir}/statistics_plot.png", dpi = 300)
+    plt.savefig(f"{figure_dir}/statistics_plot.png", dpi = 200)
     plt.close()
     
 def plot_kl_divergence(predictor, kld, figure_dir):
     names = [output.name for output in predictor.model.outputs.values()]
     positions = range(1, kld.shape[1] + 1)
-    plt.figure(dpi = 200, figsize = (6, 6))
+    plt.figure(figsize = (6, 6))
     bplot = plt.boxplot(kld, whis = [0, 100], patch_artist = True)
     for patch in bplot["boxes"]: patch.set_facecolor("darkgray")
     for patch in bplot["medians"]: patch.set_color("black")
@@ -185,7 +185,7 @@ def plot_kl_divergence(predictor, kld, figure_dir):
     plt.xticks(positions, names, rotation = 45, ha = "right")
     plt.yscale("symlog")
     plt.tight_layout()
-    plt.savefig(f"{figure_dir}/kl_divergence_plot.png")
+    plt.savefig(f"{figure_dir}/kl_divergence_plot.png", dpi = 200)
     plt.close()
 
 def plot_mean_squares(predictor, mse, figure_dir):
@@ -200,7 +200,7 @@ def plot_mean_squares(predictor, mse, figure_dir):
                 positions[j] += 0.5*i + 1
                 ticks[i] += positions[j] / len(output.dist.params)
     
-    plt.figure(dpi = 200, figsize = (10, 6))
+    plt.figure(figsize = (10, 6))
     bplot = plt.boxplot(mse, whis = [0, 100], widths = 0.5, positions = positions, patch_artist = True, label = labels)
     for patch, color in zip(bplot["boxes"], colors): patch.set_facecolor(color)
     for patch in bplot["medians"]: patch.set_color("black")
@@ -211,5 +211,5 @@ def plot_mean_squares(predictor, mse, figure_dir):
     by_label = dict(zip(labels, handles))
     plt.legend(by_label.values(), by_label.keys(), bbox_to_anchor = (1.02, 1), loc = "upper left")
     plt.tight_layout()
-    plt.savefig(f"{figure_dir}/mean_squares_plot.png")
+    plt.savefig(f"{figure_dir}/mean_squares_plot.png", dpi = 200)
     plt.close()
